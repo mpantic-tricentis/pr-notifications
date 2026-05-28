@@ -15,7 +15,10 @@ jobs:
         with:
           github-token: ${{ secrets.PR_TOKEN }}
           script: |
-            const teamMembers = [];
+            const teamMembers = [
+              'alice',
+              'bob',
+            ];
 
             const author = context.payload.pull_request.user.login;
 
@@ -29,17 +32,24 @@ jobs:
                 labels: ['external'],
               });
 
-              await fetch('https://slack.com/api/chat.postMessage', {
+              const response = await fetch('https://slack.com/api/chat.postMessage', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.SLACK_TOKEN}`
+                  'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`
                 },
                 body: JSON.stringify({
                   channel: 'C0B6JFBU1U3',
                   text: `🔔 External PR opened by *${author}*\n*<${pr.html_url}|${pr.title}>*`
                 })
               });
+
+              const result = await response.json();
+              console.log('Slack response:', JSON.stringify(result));
+
+              if (!response.ok || !result.ok) {
+                throw new Error(`Slack API error: ${result.error || response.statusText}`);
+              }
             }
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
