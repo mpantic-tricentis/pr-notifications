@@ -1,36 +1,48 @@
-name: Label external PRs
+name: Notify Slack for external PRs
 
 on:
   pull_request_target:
     types: [opened]
 
 jobs:
-  label:
+  notify:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
-      - name: Label if author is not a team member
+      - name: Label and notify if author is not a team member
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PR_TOKEN }}
+          github-token: ${{ secrets.LABEL_TOKEN }}
           script: |
-            const teamMembers = [];
+            const teamMembers = [
+              'alice',
+              'bob',
+            ];
 
             const author = context.payload.pull_request.user.login;
 
             if (!teamMembers.includes(author)) {
+              const pr = context.payload.pull_request;
+
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
+                issue_number: pr.number,
                 labels: ['external'],
               });
 
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body: `👋 This PR was opened by @${author} who is not a Builder team member.`
+              await fetch('https://slack.com/api/chat.postMessage', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${process.env.SLACK_TOKEN}`
+                },
+                body: JSON.stringify({
+                  channel: 'C0B6JFBU1U3',
+                  text: `🔔 External PR opened by *${author}*\n*<${pr.html_url}|${pr.title}>*`
+                })
               });
             }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
