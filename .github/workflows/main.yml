@@ -50,6 +50,6 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: `> ⚙️ *This PR is being briefly closed and reopened automatically. This is a temporary workaround to trigger Slack notifications via the GitHub app until a dedicated Slack bot token is available. No action needed.*`
+                body: `👋 This PR was opened by @${author} who is not a member of the team. It has been labeled as \`external\` for tracking purposes.`
               });
             }
