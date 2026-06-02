@@ -1,5 +1,4 @@
 name: Label External PRs
-
 on:
   pull_request_target:
     types: [opened]
@@ -10,10 +9,17 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      - name: Generate bot token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.PR_APP_ID }}
+          private_key: ${{ secrets.PR_APP_PRIVATE_KEY }}
+
       - name: Label, close and reopen PR
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PR_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const teamMembers = [
               'alice',
@@ -32,6 +38,18 @@ jobs:
                 labels: ['external'],
               });
 
+              // TEMPORARY HACK: We close and reopen the PR so the GitHub Slack app fires
+              // a notification after the 'external' label has already been applied.
+              // The Slack app checks labels at notification time, so if we don't do this
+              // it fires on 'opened' before our label is set and the +label filter misses it.
+              // TODO: Remove this once we have a Slack bot token and can post directly.
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: `> ⚙️ *This PR is being briefly closed and reopened automatically. This is a temporary workaround to trigger Slack notifications via the GitHub app until a dedicated Slack bot token is available. No action needed.*`
+              });
+              
               await github.rest.pulls.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
