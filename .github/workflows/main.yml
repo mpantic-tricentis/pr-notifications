@@ -16,7 +16,7 @@ jobs:
           app_id: ${{ secrets.PR_APP_ID }}
           private_key: ${{ secrets.PR_APP_PRIVATE_KEY }}
 
-      - name: Label, close and reopen PR
+      - name: Label PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ steps.app-token.outputs.token }}
@@ -38,7 +38,7 @@ jobs:
                 labels: ['external'],
               });
 
-              // TEMPORARY HACK: We close and reopen the PR so the GitHub Slack app fires
+              // TEMPORARY HACK: We comment on the PR so the GitHub Slack app fires
               // a notification after the 'external' label has already been applied.
               // The Slack app checks labels at notification time, so if we don't do this
               // it fires on 'opened' before our label is set and the +label filter misses it.
@@ -48,19 +48,5 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: pr.number,
                 body: `> ⚙️ *This PR is being briefly closed and reopened automatically. This is a temporary workaround to trigger Slack notifications via the GitHub app until a dedicated Slack bot token is available. No action needed.*`
-              });
-              
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                state: 'closed',
-              });
-
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                state: 'open',
               });
             }
