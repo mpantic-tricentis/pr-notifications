@@ -1,16 +1,16 @@
-name: Notify Slack for external PRs
+name: Label External PRs
 
 on:
   pull_request_target:
     types: [opened]
 
 jobs:
-  notify:
+  label:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
-      - name: Label and notify if author is not a team member
+      - name: Label, close and reopen PR
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PR_TOKEN }}
@@ -32,24 +32,17 @@ jobs:
                 labels: ['external'],
               });
 
-              const response = await fetch('https://slack.com/api/chat.postMessage', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`
-                },
-                body: JSON.stringify({
-                  channel: 'C0B6JFBU1U3',
-                  text: `🔔 External PR opened by *${author}*\n*<${pr.html_url}|${pr.title}>*`
-                })
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                state: 'closed',
               });
 
-              const result = await response.json();
-              console.log('Slack response:', JSON.stringify(result));
-
-              if (!response.ok || !result.ok) {
-                throw new Error(`Slack API error: ${result.error || response.statusText}`);
-              }
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                state: 'open',
+              });
             }
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_TOKEN }}
